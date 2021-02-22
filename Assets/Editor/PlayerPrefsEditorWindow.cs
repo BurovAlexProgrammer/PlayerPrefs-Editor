@@ -2,11 +2,22 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
+using System;
 
 public class PlayerPrefsEditorWindow : EditorWindow {
     string companyName;
     string productName;
-    public static PlayerPrefsEditorWindow instance;
+    List<PlayerPrefItem> playerPrefs = new List<PlayerPrefItem>(); 
+
+    enum PlayerPrefTypes { Float, Integer, String };
+
+    [Serializable]
+    public class PlayerPrefItem {
+        string key;
+        object value;
+        PlayerPrefTypes type;
+    }
+
 
     [MenuItem("Window/PlayerPrefs Editor")]
     public static void ShowWindow() {
@@ -29,9 +40,9 @@ public class PlayerPrefsEditorWindow : EditorWindow {
             Awake();
         GUILayout.BeginHorizontal();
         if (GUILayout.Button("Int")) 
-            PlayerPrefs.SetInt("int", Random.Range(1, 100));
+            PlayerPrefs.SetInt("int", UnityEngine.Random.Range(1, 100));
         if (GUILayout.Button("Float"))
-            PlayerPrefs.SetFloat("float", Random.Range(1, 100));
+            PlayerPrefs.SetFloat("float", UnityEngine.Random.Range(1, 100));
         if (GUILayout.Button("String"))
             PlayerPrefs.SetString("string", "some text");
         GUILayout.EndHorizontal();
@@ -48,7 +59,19 @@ public class PlayerPrefsEditorWindow : EditorWindow {
 #endif
             if (regKey != null) {
                 string[] keys = regKey.GetValueNames();
+                foreach (var _key in keys) {
+                    string key = _key;
+                    var value = regKey.GetValue(key);
+                    int index = key.LastIndexOf("_");
+                    if (index == -1) {
+                        Debug.LogError("Not correct reg value");
+                        continue;
+                    }
+                    key = key.Remove(index, key.Length - index);
+                }
             }
         }
     }
+
+
 }
