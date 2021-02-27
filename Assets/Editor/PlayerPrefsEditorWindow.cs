@@ -11,12 +11,20 @@ public class PlayerPrefsEditorWindow : EditorWindow {
     string productName;
     List<PlayerPrefItem> originPlayerPrefs = new List<PlayerPrefItem>();
     List<PlayerPrefItem> playerPrefs = new List<PlayerPrefItem>();
+    PlayerPrefItem newPlayerPref = new PlayerPrefItem();
 
     readonly string[] PlayerPrefTypes = new string[3] { "Float", "Integer", "String" };
+    string selectedNewPrefType = "String";
 
     public class PlayerPrefItem {
         static int _newIndex = 0;
         static int newIndex { get { return _newIndex++; } }
+        public PlayerPrefItem() {
+            this.index = newIndex;
+            this.type = "String";
+            this.key = "";
+            this.value = "";
+        }
         public PlayerPrefItem(string type, string key, object value) {
             this.index = newIndex;
             this.type = type;
@@ -62,12 +70,11 @@ public class PlayerPrefsEditorWindow : EditorWindow {
         int? indexForRemove = null;
         var unsavedChanges = false;
 
-        GUIStyle playerPrefCardStyle = new GUIStyle(GUI.skin.box);
-
-        GUIStyle commonStateStyle = new GUIStyle(GUI.skin.label) { fontStyle = FontStyle.Bold, fontSize = 14 };
-        GUIStyle newStateStyle = new GUIStyle(commonStateStyle);
+        //Styles
+        var commonStateStyle = new GUIStyle(GUI.skin.label) { fontStyle = FontStyle.Bold, fontSize = 14 };
+        var newStateStyle = new GUIStyle(commonStateStyle);
         newStateStyle.normal.textColor = Color.green;
-        GUIStyle editStateStyle = new GUIStyle(commonStateStyle);
+        var editStateStyle = new GUIStyle(commonStateStyle);
         editStateStyle.normal.textColor = Color.yellow;
 
         GUILayout.BeginVertical();
@@ -144,9 +151,43 @@ public class PlayerPrefsEditorWindow : EditorWindow {
     }
 
     void DrawToolbar() {
+        //styles
+        var commonButtonStyle = new GUIStyle(GUI.skin.button);
+        commonButtonStyle.fixedWidth = 60;
+        var selectedButtonStyle = new GUIStyle(commonButtonStyle);
+        selectedButtonStyle.normal.textColor = Color.yellow;
+        var unselectedButtonStyle = new GUIStyle(commonButtonStyle);
+        unselectedButtonStyle.normal.textColor = Color.white;
+        var createButtonStyle = new GUIStyle(GUI.skin.button);
+        createButtonStyle.normal.textColor = Color.green;
+        createButtonStyle.stretchWidth = true;
+
+        var stringButtonStyle = unselectedButtonStyle;
+        var floatButtonStyle = unselectedButtonStyle;
+        var intButtonStyle = unselectedButtonStyle;
+        if (selectedNewPrefType == "String") stringButtonStyle = selectedButtonStyle;
+        if (selectedNewPrefType == "Float") floatButtonStyle = selectedButtonStyle;
+        if (selectedNewPrefType == "Integer") intButtonStyle = selectedButtonStyle;
+
+        var keyInputStyle = new GUIStyle(GUI.skin.textField);
+        keyInputStyle.fixedWidth = 150;
+        var valueInputStyle = new GUIStyle(GUI.skin.textField);
+        valueInputStyle.fixedWidth = 150;
+
         GUILayout.BeginHorizontal(); 
         {
-            item.key = EditorGUILayout.TextField(item.key, GUILayout.Width(200));
+            newPlayerPref.key = EditorGUILayout.TextField(newPlayerPref.key, keyInputStyle);
+            if (GUILayout.Button("String", stringButtonStyle)) selectedNewPrefType = "String";
+            if (GUILayout.Button("Integer", intButtonStyle)) selectedNewPrefType = "Integer";
+            if (GUILayout.Button("Float", floatButtonStyle)) selectedNewPrefType = "Float";
+            newPlayerPref.type = selectedNewPrefType;
+            if (selectedNewPrefType == "String")
+                newPlayerPref.value = EditorGUILayout.TextField(ConvertToString(newPlayerPref.value), valueInputStyle);
+            if (selectedNewPrefType == "Float")
+                newPlayerPref.value = EditorGUILayout.FloatField(ConvertToFloat(newPlayerPref.value), valueInputStyle);
+            if (selectedNewPrefType == "Integer")
+                newPlayerPref.value = EditorGUILayout.IntField(ConvertToInt(newPlayerPref.value), valueInputStyle);
+            if (GUILayout.Button("Create", createButtonStyle)) { }
         }
         GUILayout.EndHorizontal();
     }
