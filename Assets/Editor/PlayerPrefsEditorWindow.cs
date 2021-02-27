@@ -54,13 +54,12 @@ public class PlayerPrefsEditorWindow : EditorWindow {
 
     //Rect rect1 = new Rect(0, 0, 300, 50);
     private void OnGUI() {
-
         //On data changed
         //EditorGUI.BeginChangeCheck();
         //item.key = EditorGUILayout.TextField(item.key, GUILayout.Width(200));
         //if (EditorGUI.EndChangeCheck()) {
-        //    Debug.Log("Changed");
         //}
+        int? indexForRemove = null;
         var unsavedChanges = false;
 
         GUIStyle playerPrefCardStyle = new GUIStyle(GUI.skin.box);
@@ -91,23 +90,33 @@ public class PlayerPrefsEditorWindow : EditorWindow {
                     item.state = "";
             }
 
-            GUILayout.BeginHorizontal();
-
-            EditorGUILayout.LabelField(item.state, item.state == "+" ? newStateStyle : item.state == "*" ? editStateStyle : commonStateStyle, GUILayout.Width(13));
-            item.key = EditorGUILayout.TextField(item.key, GUILayout.Width(200));
-            var typeIndex = EditorGUILayout.Popup("", GetTypesIndex(item.type), PlayerPrefTypes, GUILayout.Width(70));
-            item.type = typeIndex == -1 ? "" : PlayerPrefTypes[typeIndex];
-            if (item.type == "String")
-                item.value = EditorGUILayout.TextField(ConvertToString(item.value), GUILayout.Width(200));
-            if (item.type == "Integer")
-                item.value = EditorGUILayout.IntField(ConvertToInt(item.value), GUILayout.Width(200));
-            if (item.type == "Float")
-                item.value = EditorGUILayout.FloatField(ConvertToFloat(item.value), GUILayout.Width(200));
-            GUILayout.EndHorizontal();
+            GUILayout.BeginHorizontal(); {
+                //Status
+                EditorGUILayout.LabelField(item.state, item.state == "+" ? newStateStyle : item.state == "*" ? editStateStyle : commonStateStyle, GUILayout.Width(13));
+                //Key
+                item.key = EditorGUILayout.TextField(item.key, GUILayout.Width(200));
+                //Type
+                var typeIndex = EditorGUILayout.Popup("", GetTypesIndex(item.type), PlayerPrefTypes, GUILayout.Width(70));
+                item.type = typeIndex == -1 ? "" : PlayerPrefTypes[typeIndex];
+                //Value
+                if (item.type == "String")
+                    item.value = EditorGUILayout.TextField(ConvertToString(item.value), GUILayout.Width(200));
+                if (item.type == "Integer")
+                    item.value = EditorGUILayout.IntField(ConvertToInt(item.value), GUILayout.Width(200));
+                if (item.type == "Float")
+                    item.value = EditorGUILayout.FloatField(ConvertToFloat(item.value), GUILayout.Width(200));
+                //Button remove
+                if (GUILayout.Button("X", GUILayout.Width(30))) {
+                    indexForRemove = item.index;
+                }
+            } GUILayout.EndHorizontal();
             GUILayout.Space(4);
         }
         
         GUILayout.EndVertical();
+        //Removing an item
+        if (indexForRemove != null) 
+            playerPrefs.Remove(playerPrefs.Where(x => x.index == indexForRemove).First());
     }
 
     string ConvertToString(object obj) {
