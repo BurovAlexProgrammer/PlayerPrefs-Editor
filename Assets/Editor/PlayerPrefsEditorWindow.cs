@@ -3,31 +3,45 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 using System;
+using System.Reflection;
+using System.Linq;
 
 public class PlayerPrefsEditorWindow : EditorWindow {
     string companyName;
     string productName;
-    List<PlayerPrefItem> playerPrefs = new List<PlayerPrefItem>(); 
+    List<PlayerPrefItem> originPlayerPrefs = new List<PlayerPrefItem>();
+    List<PlayerPrefItem> playerPrefs = new List<PlayerPrefItem>();
 
-    public enum PlayerPrefTypes { Float, Integer, String };
+    readonly string[] PlayerPrefTypes = new string[3] { "Float", "Integer", "String" };
 
-    [Serializable]
     public class PlayerPrefItem {
-        public PlayerPrefItem(PlayerPrefTypes type, string key, object value) {
+        static int _newIndex = 0;
+        static int newIndex { get { return _newIndex++; } }
+        public PlayerPrefItem(string type, string key, object value) {
+            this.index = newIndex;
             this.type = type;
             this.key = key;
             this.value = value;
         }
-        string key;
-        object value;
-        PlayerPrefTypes type;
-    }
+        public int index;
+        public string key;
+        public object value;
+        public string type;
+        public string state;
 
+        public PlayerPrefItem Clone() {
+            var clonedItem = new PlayerPrefItem(this.type, this.key, this.value);
+            clonedItem.index = this.index;
+            return clonedItem;
+        }
+    }
 
     [MenuItem("Window/PlayerPrefs Editor")]
     public static void ShowWindow() {
         var editorWindow = GetWindow<PlayerPrefsEditorWindow>("PlayerPrefs");
-        editorWindow.ShowUtility();
+        editorWindow.Close(); //temp for reload window  //TODO delete
+        editorWindow = GetWindow<PlayerPrefsEditorWindow>("PlayerPrefs");
+        editorWindow.Show();
     }
 
     private void Awake() {
@@ -35,27 +49,105 @@ public class PlayerPrefsEditorWindow : EditorWindow {
         productName = PlayerSettings.productName;
         var pathToPrefs = "";
         pathToPrefs = $@"SOFTWARE\Unity\UnityEditor\{companyName}\{productName}";
-
         LoadPlayerPrefs();
     }
 
+    //Rect rect1 = new Rect(0, 0, 300, 50);
     private void OnGUI() {
+
+        //On data changed
+        //EditorGUI.BeginChangeCheck();
+        //item.key = EditorGUILayout.TextField(item.key, GUILayout.Width(200));
+        //if (EditorGUI.EndChangeCheck()) {
+        //    Debug.Log("Changed");
+        //}
+        var unsavedChanges = false;
+
+        GUIStyle playerPrefCardStyle = new GUIStyle(GUI.skin.box);
+
+        GUIStyle commonStateStyle = new GUIStyle(GUI.skin.label) { fontStyle = FontStyle.Bold, fontSize = 14 };
+        GUIStyle newStateStyle = new GUIStyle(commonStateStyle);
+        newStateStyle.normal.textColor = Color.green;
+        GUIStyle editStateStyle = new GUIStyle(commonStateStyle);
+        editStateStyle.normal.textColor = Color.yellow;
+
         GUILayout.BeginVertical();
-        if (GUILayout.Button("Reload"))
-            Awake();
-        GUILayout.BeginHorizontal();
-        if (GUILayout.Button("Int")) 
-            PlayerPrefs.SetInt("int", UnityEngine.Random.Range(1, 100));
-        if (GUILayout.Button("Float"))
-            PlayerPrefs.SetFloat("float", UnityEngine.Random.Range(1, 100));
-        if (GUILayout.Button("String"))
-            PlayerPrefs.SetString("string", "some text");
-        GUILayout.EndHorizontal();
+        DrawTestToolbar();
+
+        foreach (PlayerPrefItem item in playerPrefs) {
+            var originItem = originPlayerPrefs.DefaultIfEmpty(null).FirstOrDefault((x) => x.index == item.index);
+            //if new key
+            if (originItem == null) {
+                item.state = "+";
+                unsavedChanges = true;
+            }
+            //if changed else not changed
+            else {
+                if (!originItem.key.Equals(item.key) || !originItem.value.Equals(item.value) || !originItem.type.Equals(item.type)) {
+                    item.state = "*";
+                    unsavedChanges = true;
+                }
+                else
+                    item.state = "";
+            }
+
+            GUILayout.BeginHorizontal();
+
+            EditorGUILayout.LabelField(item.state, item.state == "+" ? newStateStyle : item.state == "*" ? editStateStyle : commonStateStyle, GUILayout.Width(13));
+            item.key = EditorGUILayout.TextField(item.key, GUILayout.Width(200));
+            var typeIndex = EditorGUILayout.Popup("", GetTypesIndex(item.type), PlayerPrefTypes, GUILayout.Width(70));
+            item.type = typeIndex == -1 ? "" : PlayerPrefTypes[typeIndex];
+            if (item.type == "String")
+                item.value = EditorGUILayout.TextField(ConvertToString(item.value), GUILayout.Width(200));
+            if (item.type == "Integer")
+                item.value = EditorGUILayout.IntField(ConvertToInt(item.value), GUILayout.Width(200));
+            if (item.type == "Float")
+                item.value = EditorGUILayout.FloatField(ConvertToFloat(item.value), GUILayout.Width(200));
+            GUILayout.EndHorizontal();
+            GUILayout.Space(4);
+        }
+        
         GUILayout.EndVertical();
     }
 
+    string ConvertToString(object obj) {
+        return obj?.ToString() ?? "";
+    }
+
+    int ConvertToInt(object obj) {
+        var line = ConvertToString(obj);
+        int result;
+        if (int.TryParse(line, out result)) 
+            return result;
+        return 0;
+    }
+    float ConvertToFloat(object obj) {
+        var line = ConvertToString(obj);
+        float result;
+        if (float.TryParse(line, out result))
+            return result;
+        return 0;
+    }
+
+    int GetTypesIndex(string type) {
+        return PlayerPrefTypes.ToList().FindIndex(x => x == type);
+    }
+
+    void DrawTestToolbar() {
+        if (GUILayout.Button("Reload"))
+            Awake();
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("Int"))
+            PlayerPrefs.SetInt("int", 123);
+        if (GUILayout.Button("Float"))
+            PlayerPrefs.SetFloat("float", 76.765f);
+        if (GUILayout.Button("String"))
+            PlayerPrefs.SetString("string", "some text");
+        GUILayout.EndHorizontal();
+    }
+
     void LoadPlayerPrefs() {
-        playerPrefs.Clear();
+        originPlayerPrefs.Clear();
         if (Application.platform == RuntimePlatform.WindowsEditor) {
             //Windows PlayerPrefs located on registry: HKEY_CURRENT_USER\Software\<CompanyName>]\<ProductName>\keys.
 #if UNITY_5_5_OR_NEWER
@@ -78,25 +170,39 @@ public class PlayerPrefsEditorWindow : EditorWindow {
                     //string
                     if (value.GetType() == typeof(byte[])) {
                         var stringValue = PlayerPrefs.GetString(key);
-                        playerPrefs.Add(new PlayerPrefItem(PlayerPrefTypes.String, key, stringValue));
+                        originPlayerPrefs.Add(new PlayerPrefItem("String", key, stringValue));
                     }
                     //int, float
                     if (value.GetType() == typeof(int)) {
                         //if GetInt returns default twice then it is float
                         if (PlayerPrefs.GetInt(key, 0) == 0 && PlayerPrefs.GetInt(key, -1) == -1) {
                             var floatValue = PlayerPrefs.GetFloat(key);
-                            playerPrefs.Add(new PlayerPrefItem(PlayerPrefTypes.Float, key, floatValue));
+                            originPlayerPrefs.Add(new PlayerPrefItem("Float", key, floatValue));
                         }
                         else {
                             var intValue = PlayerPrefs.GetInt(key);
-                            playerPrefs.Add(new PlayerPrefItem(PlayerPrefTypes.Integer, key, intValue));
+                            originPlayerPrefs.Add(new PlayerPrefItem("Integer", key, intValue));
                         }
                     }
                 }
-                Debug.Log("");
             }
         }
+        playerPrefs.Clear();
+        playerPrefs = originPlayerPrefs.Select(x => x.Clone()).ToList();
+        playerPrefs.Add(new PlayerPrefItem("Integer", "testt", 123));
+
     }
 
+    /// <summary>
+    /// Return last control ID setted in GUI
+    /// </summary>
+    /// <returns>Last control ID setted</returns>
+    public static int GetLastControlId() {
+        FieldInfo getLastControlId = typeof(EditorGUIUtility).GetField("s_LastControlID", BindingFlags.Static | BindingFlags.NonPublic);
+        if (getLastControlId != null)
+            return (int)getLastControlId.GetValue(null);
+        return 0;
+    }
 
 }
+
