@@ -72,6 +72,7 @@ public class PlayerPrefsEditorWindow : EditorWindow {
 
         GUILayout.BeginVertical();
         DrawTestToolbar();
+        DrawToolbar();
 
         foreach (PlayerPrefItem item in playerPrefs) {
             var originItem = originPlayerPrefs.DefaultIfEmpty(null).FirstOrDefault((x) => x.index == item.index);
@@ -140,6 +141,14 @@ public class PlayerPrefsEditorWindow : EditorWindow {
 
     int GetTypesIndex(string type) {
         return PlayerPrefTypes.ToList().FindIndex(x => x == type);
+    }
+
+    void DrawToolbar() {
+        GUILayout.BeginHorizontal(); 
+        {
+            item.key = EditorGUILayout.TextField(item.key, GUILayout.Width(200));
+        }
+        GUILayout.EndHorizontal();
     }
 
     void DrawTestToolbar() {
