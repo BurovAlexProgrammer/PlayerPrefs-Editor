@@ -15,7 +15,7 @@ public class PlayerPrefsEditorWindow : EditorWindow {
 
     readonly string[] PlayerPrefTypes = new string[3] { "Float", "Integer", "String" };
     string selectedNewPrefType = "String";
-    bool foldoutAddingItem = true;
+    bool unsavedChanges = false;
 
     public class PlayerPrefItem {
         static int _newIndex = 0;
@@ -69,7 +69,6 @@ public class PlayerPrefsEditorWindow : EditorWindow {
         //if (EditorGUI.EndChangeCheck()) {
         //}
         int? indexForRemove = null;
-        var unsavedChanges = false;
 
         //Styles
         var commonStateStyle = new GUIStyle(GUI.skin.label) { fontStyle = FontStyle.Bold, fontSize = 14 };
@@ -132,8 +131,11 @@ public class PlayerPrefsEditorWindow : EditorWindow {
         
         GUILayout.EndVertical();
         //Removing an item
-        if (indexForRemove != null) 
+        if (indexForRemove != null) {
+            unsavedChanges = true;
             playerPrefs.Remove(playerPrefs.Where(x => x.index == indexForRemove).First());
+            indexForRemove = null;
+        }
     }
 
     string ConvertToString(object obj) {
@@ -159,21 +161,51 @@ public class PlayerPrefsEditorWindow : EditorWindow {
     }
 
     void DrawTopButtons() {
-        var redColor = new Color(0.9f, 0.3f, 0.3f);
+        var redColor = new Color(0.7f, 0.2f, 0.2f);
         var buttonSaveStyle = new GUIStyle(GUI.skin.button);
         buttonSaveStyle.fontStyle = FontStyle.Bold;
         buttonSaveStyle.normal.textColor = redColor;
         buttonSaveStyle.focused.textColor = redColor;
 
         GUILayout.BeginHorizontal();
-        GUILayout.Button("Save", buttonSaveStyle, GUILayout.Width(100));
-        GUILayout.Button("Reset", GUILayout.Width(100));
+        if (unsavedChanges) {
+            if (GUILayout.Button("Save", buttonSaveStyle, GUILayout.Width(100)))
+                SaveItems();
+            if (GUILayout.Button("Reset", GUILayout.Width(100)))
+                Reload();
+        }
         GUILayout.FlexibleSpace();
         if (GUILayout.Button("Reload", GUILayout.Width(100)))
-            Awake();
+            Reload();
         GUILayout.Space(6);
         GUILayout.EndHorizontal();
     }
+
+    void SaveItems() {
+        unsavedChanges = false;
+    }
+
+    void Reload() {
+        unsavedChanges = false;
+        Awake();
+    }
+
+    void ValidateAndCreate(PlayerPrefItem item) {
+        var hasIssues = false;
+        if (String.IsNullOrEmpty(item.key.Trim())) {
+            hasIssues = true;
+            ShowMessage("Enter key for the new item.");
+        }
+
+        if (!hasIssues) {
+            //TODO Adding item
+        }
+
+    }
+
+    void ShowMessage(string message) {
+        //TODO show dialog window
+    } 
 
     void DrawHeaders() {
         var headerStyle = new GUIStyle(GUI.skin.label);
@@ -219,6 +251,7 @@ public class PlayerPrefsEditorWindow : EditorWindow {
                 newPlayerPref.key = EditorGUILayout.TextField(newPlayerPref.key, GUILayout.Width(200));
                 var typeIndex = 0;
                 typeIndex = EditorGUILayout.Popup(typeIndex, PlayerPrefTypes, GUILayout.Width(70));
+                //TODO issue: does not save selected type
                 selectedNewPrefType = typeIndex == -1 ? "" : PlayerPrefTypes[typeIndex];
                 newPlayerPref.type = selectedNewPrefType;
                 if (selectedNewPrefType == "String")
@@ -228,7 +261,8 @@ public class PlayerPrefsEditorWindow : EditorWindow {
                 if (selectedNewPrefType == "Integer")
                     newPlayerPref.value = EditorGUILayout.IntField(ConvertToInt(newPlayerPref.value), GUILayout.Width(200));
                 GUILayout.FlexibleSpace();
-                if (GUILayout.Button("Create", createButtonStyle)) { }
+                if (GUILayout.Button("Create", createButtonStyle)) 
+                    ValidateAndCreate(newPlayerPref);
             }
             GUILayout.EndHorizontal();
         }
@@ -290,20 +324,8 @@ public class PlayerPrefsEditorWindow : EditorWindow {
         }
         playerPrefs.Clear();
         playerPrefs = originPlayerPrefs.Select(x => x.Clone()).ToList();
-        playerPrefs.Add(new PlayerPrefItem("Integer", "testt", 123));
+        //playerPrefs.Add(new PlayerPrefItem("Integer", "testt", 123)); //for test
 
     }
-
-    /// <summary>
-    /// Return last control ID setted in GUI
-    /// </summary>
-    /// <returns>Last control ID setted</returns>
-    public static int GetLastControlId() {
-        FieldInfo getLastControlId = typeof(EditorGUIUtility).GetField("s_LastControlID", BindingFlags.Static | BindingFlags.NonPublic);
-        if (getLastControlId != null)
-            return (int)getLastControlId.GetValue(null);
-        return 0;
-    }
-
 }
 
