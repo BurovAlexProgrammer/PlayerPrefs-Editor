@@ -15,6 +15,7 @@ public class PlayerPrefsEditorWindow : EditorWindow {
 
     readonly string[] PlayerPrefTypes = new string[3] { "Float", "Integer", "String" };
     string selectedNewPrefType = "String";
+    bool foldoutAddingItem = true;
 
     public class PlayerPrefItem {
         static int _newIndex = 0;
@@ -130,7 +131,6 @@ public class PlayerPrefsEditorWindow : EditorWindow {
     string ConvertToString(object obj) {
         return obj?.ToString() ?? "";
     }
-
     int ConvertToInt(object obj) {
         var line = ConvertToString(obj);
         int result;
@@ -160,36 +160,37 @@ public class PlayerPrefsEditorWindow : EditorWindow {
         unselectedButtonStyle.normal.textColor = Color.white;
         var createButtonStyle = new GUIStyle(GUI.skin.button);
         createButtonStyle.normal.textColor = Color.green;
-        createButtonStyle.stretchWidth = true;
+        createButtonStyle.focused.textColor = Color.green;
+        //createButtonStyle.stretchWidth = true;
 
-        var stringButtonStyle = unselectedButtonStyle;
-        var floatButtonStyle = unselectedButtonStyle;
-        var intButtonStyle = unselectedButtonStyle;
-        if (selectedNewPrefType == "String") stringButtonStyle = selectedButtonStyle;
-        if (selectedNewPrefType == "Float") floatButtonStyle = selectedButtonStyle;
-        if (selectedNewPrefType == "Integer") intButtonStyle = selectedButtonStyle;
+        var newItemStyle = new GUIStyle(GUI.skin.button);
+        newItemStyle.normal.background = Texture2D.grayTexture;
 
-        var keyInputStyle = new GUIStyle(GUI.skin.textField);
-        keyInputStyle.fixedWidth = 150;
-        var valueInputStyle = new GUIStyle(GUI.skin.textField);
-        valueInputStyle.fixedWidth = 150;
-
-        GUILayout.BeginHorizontal(); 
+        GUILayout.BeginVertical(newItemStyle);
         {
-            newPlayerPref.key = EditorGUILayout.TextField(newPlayerPref.key, keyInputStyle);
-            if (GUILayout.Button("String", stringButtonStyle)) selectedNewPrefType = "String";
-            if (GUILayout.Button("Integer", intButtonStyle)) selectedNewPrefType = "Integer";
-            if (GUILayout.Button("Float", floatButtonStyle)) selectedNewPrefType = "Float";
-            newPlayerPref.type = selectedNewPrefType;
-            if (selectedNewPrefType == "String")
-                newPlayerPref.value = EditorGUILayout.TextField(ConvertToString(newPlayerPref.value), valueInputStyle);
-            if (selectedNewPrefType == "Float")
-                newPlayerPref.value = EditorGUILayout.FloatField(ConvertToFloat(newPlayerPref.value), valueInputStyle);
-            if (selectedNewPrefType == "Integer")
-                newPlayerPref.value = EditorGUILayout.IntField(ConvertToInt(newPlayerPref.value), valueInputStyle);
-            if (GUILayout.Button("Create", createButtonStyle)) { }
+            GUILayout.Space(4);
+            GUILayout.Label("New item");
+            GUILayout.Space(4);
+            GUILayout.BeginHorizontal();
+            {
+                GUILayout.Space(10);
+                newPlayerPref.key = EditorGUILayout.TextField(newPlayerPref.key, GUILayout.Width(200));
+                var typeIndex = 0;
+                typeIndex = EditorGUILayout.Popup(typeIndex, PlayerPrefTypes, GUILayout.Width(70));
+                selectedNewPrefType = typeIndex == -1 ? "" : PlayerPrefTypes[typeIndex];
+                newPlayerPref.type = selectedNewPrefType;
+                if (selectedNewPrefType == "String")
+                    newPlayerPref.value = EditorGUILayout.TextField(ConvertToString(newPlayerPref.value), GUILayout.Width(200));
+                if (selectedNewPrefType == "Float")
+                    newPlayerPref.value = EditorGUILayout.FloatField(ConvertToFloat(newPlayerPref.value), GUILayout.Width(200));
+                if (selectedNewPrefType == "Integer")
+                    newPlayerPref.value = EditorGUILayout.IntField(ConvertToInt(newPlayerPref.value), GUILayout.Width(200));
+                if (GUILayout.Button("Create", createButtonStyle)) { }
+            }
+            GUILayout.EndHorizontal();
         }
-        GUILayout.EndHorizontal();
+        GUILayout.Space(8);
+        GUILayout.EndVertical();
     }
 
     void DrawTestToolbar() {
