@@ -78,10 +78,18 @@ public class PlayerPrefsEditorWindow : EditorWindow {
         var editStateStyle = new GUIStyle(commonStateStyle);
         editStateStyle.normal.textColor = Color.yellow;
 
-        GUILayout.BeginVertical();
-        DrawTestToolbar();
-        DrawToolbar();
 
+        GUILayout.BeginVertical();
+        GUILayout.Space(4);
+        //DrawTestToolbar();
+
+        DrawTopButtons();
+
+        DrawToolbar();
+        GUILayout.Space(4);
+        DrawHeaders();
+
+        GUILayout.Space(4);
         foreach (PlayerPrefItem item in playerPrefs) {
             var originItem = originPlayerPrefs.DefaultIfEmpty(null).FirstOrDefault((x) => x.index == item.index);
             //if new key
@@ -150,6 +158,39 @@ public class PlayerPrefsEditorWindow : EditorWindow {
         return PlayerPrefTypes.ToList().FindIndex(x => x == type);
     }
 
+    void DrawTopButtons() {
+        var redColor = new Color(0.9f, 0.3f, 0.3f);
+        var buttonSaveStyle = new GUIStyle(GUI.skin.button);
+        buttonSaveStyle.fontStyle = FontStyle.Bold;
+        buttonSaveStyle.normal.textColor = redColor;
+        buttonSaveStyle.focused.textColor = redColor;
+
+        GUILayout.BeginHorizontal();
+        GUILayout.Button("Save", buttonSaveStyle, GUILayout.Width(100));
+        GUILayout.Button("Reset", GUILayout.Width(100));
+        GUILayout.FlexibleSpace();
+        if (GUILayout.Button("Reload", GUILayout.Width(100)))
+            Awake();
+        GUILayout.Space(6);
+        GUILayout.EndHorizontal();
+    }
+
+    void DrawHeaders() {
+        var headerStyle = new GUIStyle(GUI.skin.label);
+        headerStyle.fontStyle = FontStyle.Bold;
+        headerStyle.padding = new RectOffset(4, 0, 0, 0);
+        headerStyle.border.right = 2;
+
+        GUILayout.BeginHorizontal();
+        {
+            GUILayout.Space(20);
+            EditorGUILayout.LabelField("Key", headerStyle, GUILayout.Width(200));
+            EditorGUILayout.LabelField("Type", headerStyle, GUILayout.Width(70));
+            EditorGUILayout.LabelField("Value", headerStyle, GUILayout.Width(200));
+        }
+        GUILayout.EndHorizontal();
+    }
+
     void DrawToolbar() {
         //styles
         var commonButtonStyle = new GUIStyle(GUI.skin.button);
@@ -161,6 +202,7 @@ public class PlayerPrefsEditorWindow : EditorWindow {
         var createButtonStyle = new GUIStyle(GUI.skin.button);
         createButtonStyle.normal.textColor = Color.green;
         createButtonStyle.focused.textColor = Color.green;
+        createButtonStyle.fixedWidth = 100;
         //createButtonStyle.stretchWidth = true;
 
         var newItemStyle = new GUIStyle(GUI.skin.button);
@@ -185,6 +227,7 @@ public class PlayerPrefsEditorWindow : EditorWindow {
                     newPlayerPref.value = EditorGUILayout.FloatField(ConvertToFloat(newPlayerPref.value), GUILayout.Width(200));
                 if (selectedNewPrefType == "Integer")
                     newPlayerPref.value = EditorGUILayout.IntField(ConvertToInt(newPlayerPref.value), GUILayout.Width(200));
+                GUILayout.FlexibleSpace();
                 if (GUILayout.Button("Create", createButtonStyle)) { }
             }
             GUILayout.EndHorizontal();
@@ -194,8 +237,6 @@ public class PlayerPrefsEditorWindow : EditorWindow {
     }
 
     void DrawTestToolbar() {
-        if (GUILayout.Button("Reload"))
-            Awake();
         GUILayout.BeginHorizontal();
         if (GUILayout.Button("Int"))
             PlayerPrefs.SetInt("int", 123);
