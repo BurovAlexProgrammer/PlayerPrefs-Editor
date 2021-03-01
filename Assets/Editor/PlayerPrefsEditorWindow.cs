@@ -51,6 +51,7 @@ public class PlayerPrefsEditorWindow : EditorWindow {
         editorWindow.Close(); //temp for reload window  //TODO delete
         editorWindow = GetWindow<PlayerPrefsEditorWindow>("PlayerPrefs");
         editorWindow.Show();
+        //TODO add window min size 700 : 500
     }
 
     private void Awake() {
@@ -235,7 +236,6 @@ public class PlayerPrefsEditorWindow : EditorWindow {
         createButtonStyle.normal.textColor = Color.green;
         createButtonStyle.focused.textColor = Color.green;
         createButtonStyle.fixedWidth = 100;
-        //createButtonStyle.stretchWidth = true;
 
         var newItemStyle = new GUIStyle(GUI.skin.button);
         newItemStyle.normal.background = Texture2D.grayTexture;
@@ -249,9 +249,8 @@ public class PlayerPrefsEditorWindow : EditorWindow {
             {
                 GUILayout.Space(10);
                 newPlayerPref.key = EditorGUILayout.TextField(newPlayerPref.key, GUILayout.Width(200));
-                var typeIndex = 0;
+                var typeIndex = GetTypesIndex(newPlayerPref.type);
                 typeIndex = EditorGUILayout.Popup(typeIndex, PlayerPrefTypes, GUILayout.Width(70));
-                //TODO issue: does not save selected type
                 selectedNewPrefType = typeIndex == -1 ? "" : PlayerPrefTypes[typeIndex];
                 newPlayerPref.type = selectedNewPrefType;
                 if (selectedNewPrefType == "String")
