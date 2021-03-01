@@ -79,10 +79,8 @@ public class PlayerPrefsEditorWindow : EditorWindow {
         var editStateStyle = new GUIStyle(commonStateStyle);
         editStateStyle.normal.textColor = Color.yellow;
 
-
         GUILayout.BeginVertical();
         GUILayout.Space(4);
-        //DrawTestToolbar();
 
         DrawTopButtons();
 
@@ -130,7 +128,6 @@ public class PlayerPrefsEditorWindow : EditorWindow {
             } GUILayout.EndHorizontal();
             GUILayout.Space(4);
         }
-        
         GUILayout.EndVertical();
         //Removing an item
         if (indexForRemove != null) {
@@ -171,10 +168,12 @@ public class PlayerPrefsEditorWindow : EditorWindow {
 
         GUILayout.BeginHorizontal();
         if (unsavedChanges) {
+            GUILayout.BeginHorizontal();
             if (GUILayout.Button("Save", buttonSaveStyle, GUILayout.Width(100)))
                 ValidateAndSaveItems();
             if (GUILayout.Button("Reset", GUILayout.Width(100)))
                 Reload();
+            GUILayout.EndHorizontal();
         }
         GUILayout.FlexibleSpace();
         if (GUILayout.Button("Reload", GUILayout.Width(100)))
@@ -211,6 +210,7 @@ public class PlayerPrefsEditorWindow : EditorWindow {
             });
         }
         unsavedChanges = false;
+        Reload();
     }
 
     void Reload() {
@@ -228,23 +228,25 @@ public class PlayerPrefsEditorWindow : EditorWindow {
         ResultCodes _result;
         string _message;
         PlayerPrefItem _resultItem;
-        public ResultCodes result { get; }
-        public string message { get; }
-        public PlayerPrefItem resultItem { get; }
+        public ResultCodes result { get => _result; }
+        public string message { get => _message; }
+        public PlayerPrefItem resultItem { get => _resultItem; }
         public bool isOk {get {return result == ResultCodes.Ok;}}
         public bool isError { get { return result == ResultCodes.Error; } }
         public bool isWarning { get { return result == ResultCodes.Warning; } }
     }
 
     void ValidateAndCreate(PlayerPrefItem item) {
-        var validateResult = ValidateItem(item);
+        var validateResult = ValidateItem(item, true);
         if (!validateResult.isError) {
             item = validateResult.resultItem;
             playerPrefs.Add(new PlayerPrefItem(item.type, item.key, item.value));
+        } else {
+            ShowMessage(validateResult.message);
         }
     }
 
-    ValidationResult ValidateItem(PlayerPrefItem item) {
+    ValidationResult ValidateItem(PlayerPrefItem item, bool isNewItem = false) {
         item.key = item.key.Trim();
         item.type = item.type.Trim();
         var message = "";
@@ -259,13 +261,13 @@ public class PlayerPrefsEditorWindow : EditorWindow {
             message = $"The new item key lenght cannot be more than 255.{Environment.NewLine}It will be cuted to 255 characters.";
             item.key = item.key.Substring(0, 255);
         }
-        if (playerPrefs.Any((x) => x.key == item.key)) {
+        if (isNewItem & playerPrefs.Any((x) => x.key == item.key)) {
             resultCode = ValidationResult.ResultCodes.Error;
-            ShowMessage("The new item key is already exist.");
+            message = "The new item key is already exist.";
         }
         if (String.IsNullOrEmpty(item.type)) {
             resultCode = ValidationResult.ResultCodes.Error;
-            ShowMessage("Choose a type of the new key.");
+            message = "Choose a type of the new key.";
         }
         return new ValidationResult(resultCode, message, item);
     }
@@ -367,6 +369,7 @@ public class PlayerPrefsEditorWindow : EditorWindow {
                         continue;
                     }
                     key = key.Remove(index, key.Length - index);
+                    if (key == "unity.cloud_userid" || key == "UnityGraphicsQuality") continue;
                     //string
                     if (value.GetType() == typeof(byte[])) {
                         var stringValue = PlayerPrefs.GetString(key);
