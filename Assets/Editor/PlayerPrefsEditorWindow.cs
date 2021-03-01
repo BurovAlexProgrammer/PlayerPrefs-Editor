@@ -172,7 +172,7 @@ public class PlayerPrefsEditorWindow : EditorWindow {
         GUILayout.BeginHorizontal();
         if (unsavedChanges) {
             if (GUILayout.Button("Save", buttonSaveStyle, GUILayout.Width(100)))
-                SaveItems();
+                ValidateAndSaveItems();
             if (GUILayout.Button("Reset", GUILayout.Width(100)))
                 Reload();
         }
@@ -183,7 +183,33 @@ public class PlayerPrefsEditorWindow : EditorWindow {
         GUILayout.EndHorizontal();
     }
 
-    void SaveItems() {
+    void ValidateAndSaveItems() {
+        var hasError = false;
+        foreach (var item in playerPrefs) {
+            var validateResult = ValidateItem(item);
+            if (validateResult.isError) {
+                ShowMessage(validateResult.message);
+                hasError = true;
+                break;
+            }
+            if (validateResult.isWarning) {
+                if (!ShowMessage(validateResult.message, "Warning")) {
+                    hasError = true;
+                    break;
+                }
+            }
+        }
+        if (!hasError) {
+            PlayerPrefs.DeleteAll();
+            playerPrefs.ForEach(item => {
+                if (item.type == "String")
+                    PlayerPrefs.SetString(item.key, ConvertToString(item.value));
+                if (item.type == "Integer")
+                    PlayerPrefs.SetInt(item.key, ConvertToInt(item.value));
+                if (item.type == "Float")
+                    PlayerPrefs.SetFloat(item.key, ConvertToFloat(item.value));
+            });
+        }
         unsavedChanges = false;
     }
 
@@ -192,35 +218,60 @@ public class PlayerPrefsEditorWindow : EditorWindow {
         Awake();
     }
 
+    class ValidationResult {
+        public ValidationResult(ResultCodes result, string message, PlayerPrefItem resultItem) {
+            _result = result;
+            _message = message;
+            _resultItem = resultItem;
+        }
+        public enum ResultCodes { Ok, Error, Warning };
+        ResultCodes _result;
+        string _message;
+        PlayerPrefItem _resultItem;
+        public ResultCodes result { get; }
+        public string message { get; }
+        public PlayerPrefItem resultItem { get; }
+        public bool isOk {get {return result == ResultCodes.Ok;}}
+        public bool isError { get { return result == ResultCodes.Error; } }
+        public bool isWarning { get { return result == ResultCodes.Warning; } }
+    }
+
     void ValidateAndCreate(PlayerPrefItem item) {
+        var validateResult = ValidateItem(item);
+        if (!validateResult.isError) {
+            item = validateResult.resultItem;
+            playerPrefs.Add(new PlayerPrefItem(item.type, item.key, item.value));
+        }
+    }
+
+    ValidationResult ValidateItem(PlayerPrefItem item) {
         item.key = item.key.Trim();
         item.type = item.type.Trim();
-        var hasIssues = false;
+        var message = "";
+        var resultCode = ValidationResult.ResultCodes.Ok;
+
         if (String.IsNullOrEmpty(item.key)) {
-            hasIssues = true;
-            ShowMessage("The new item key cannot be empty.");
+            resultCode = ValidationResult.ResultCodes.Error;
+            message = "The new item key cannot be empty.";
         }
         if (item.key.Length > 255) {
-            hasIssues = true;
-            ShowMessage($"The new item key lenght cannot be more than 255.{Environment.NewLine}It will be cuted to 255 characters.");
-            item.key = item.key.Substring(0, 256);
+            resultCode = ValidationResult.ResultCodes.Warning;
+            message = $"The new item key lenght cannot be more than 255.{Environment.NewLine}It will be cuted to 255 characters.";
+            item.key = item.key.Substring(0, 255);
         }
         if (playerPrefs.Any((x) => x.key == item.key)) {
-            hasIssues = true;
+            resultCode = ValidationResult.ResultCodes.Error;
             ShowMessage("The new item key is already exist.");
         }
         if (String.IsNullOrEmpty(item.type)) {
-            hasIssues = true;
+            resultCode = ValidationResult.ResultCodes.Error;
             ShowMessage("Choose a type of the new key.");
         }
-        if (!hasIssues) {
-            //TODO Adding item
-        }
-
+        return new ValidationResult(resultCode, message, item);
     }
 
-    void ShowMessage(string message, string title = "Error: invalid fields") {
-        EditorUtility.DisplayDialog(title, message, "OK");
+    bool ShowMessage(string message, string title = "Error: invalid fields") {
+        return EditorUtility.DisplayDialog(title, message, "OK");
     } 
 
     void DrawHeaders() {
