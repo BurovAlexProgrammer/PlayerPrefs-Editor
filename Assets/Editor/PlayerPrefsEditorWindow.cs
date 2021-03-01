@@ -5,6 +5,7 @@ using UnityEditor;
 using System;
 using System.Reflection;
 using System.Linq;
+using System.Text;
 
 public class PlayerPrefsEditorWindow : EditorWindow {
     string companyName;
@@ -192,20 +193,34 @@ public class PlayerPrefsEditorWindow : EditorWindow {
     }
 
     void ValidateAndCreate(PlayerPrefItem item) {
+        item.key = item.key.Trim();
+        item.type = item.type.Trim();
         var hasIssues = false;
-        if (String.IsNullOrEmpty(item.key.Trim())) {
+        if (String.IsNullOrEmpty(item.key)) {
             hasIssues = true;
-            ShowMessage("Enter key for the new item.");
+            ShowMessage("The new item key cannot be empty.");
         }
-
+        if (item.key.Length > 255) {
+            hasIssues = true;
+            ShowMessage($"The new item key lenght cannot be more than 255.{Environment.NewLine}It will be cuted to 255 characters.");
+            item.key = item.key.Substring(0, 256);
+        }
+        if (playerPrefs.Any((x) => x.key == item.key)) {
+            hasIssues = true;
+            ShowMessage("The new item key is already exist.");
+        }
+        if (String.IsNullOrEmpty(item.type)) {
+            hasIssues = true;
+            ShowMessage("Choose a type of the new key.");
+        }
         if (!hasIssues) {
             //TODO Adding item
         }
 
     }
 
-    void ShowMessage(string message) {
-        //TODO show dialog window
+    void ShowMessage(string message, string title = "Error: invalid fields") {
+        EditorUtility.DisplayDialog(title, message, "OK");
     } 
 
     void DrawHeaders() {
