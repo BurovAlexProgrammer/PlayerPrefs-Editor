@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
+using Unity.EditorCoroutines.Editor;
 using System;
 using System.Reflection;
 using System.Linq;
@@ -17,6 +18,11 @@ public class PlayerPrefsEditorWindow : EditorWindow {
     readonly string[] PlayerPrefTypes = new string[3] { "Float", "Integer", "String" };
     string selectedNewPrefType = "String";
     bool unsavedChanges = false;
+    Vector2 scrollPosition = new Vector2();
+    string statusMessage = "Asfkjhasfkjhsa";
+    IEnumerator statusMessageCoroutine;
+    float statusMessageTimer; 
+
 
     public class PlayerPrefItem {
         static int _newIndex = 0;
@@ -51,8 +57,8 @@ public class PlayerPrefsEditorWindow : EditorWindow {
         var editorWindow = GetWindow<PlayerPrefsEditorWindow>("PlayerPrefs");
         editorWindow.Close(); //temp for reload window  //TODO delete
         editorWindow = GetWindow<PlayerPrefsEditorWindow>("PlayerPrefs");
+        editorWindow.minSize = new Vector2(650, 400);
         editorWindow.Show();
-        //TODO add window min size 700 : 500
     }
 
     private void Awake() {
@@ -78,17 +84,21 @@ public class PlayerPrefsEditorWindow : EditorWindow {
         newStateStyle.normal.textColor = Color.green;
         var editStateStyle = new GUIStyle(commonStateStyle);
         editStateStyle.normal.textColor = Color.yellow;
+        var statusBarStyle = new GUIStyle(GUI.skin.label);
+        statusBarStyle.normal.background = Texture2D.blackTexture;
+        statusBarStyle.padding = new RectOffset(4,4,4,4);
 
+        GUILayout.BeginVertical();
         GUILayout.BeginVertical();
         GUILayout.Space(4);
 
         DrawTopButtons();
-
         DrawToolbar();
         GUILayout.Space(4);
         DrawHeaders();
-
         GUILayout.Space(4);
+
+        scrollPosition = GUILayout.BeginScrollView(scrollPosition);
         foreach (PlayerPrefItem item in playerPrefs) {
             var originItem = originPlayerPrefs.DefaultIfEmpty(null).FirstOrDefault((x) => x.index == item.index);
             //if new key
@@ -129,12 +139,30 @@ public class PlayerPrefsEditorWindow : EditorWindow {
             GUILayout.Space(4);
         }
         GUILayout.EndVertical();
+        GUILayout.EndScrollView();
+        EditorGUILayout.HelpBox(statusMessage, MessageType.None, true);
+        GUILayout.EndVertical();
         //Removing an item
         if (indexForRemove != null) {
             unsavedChanges = true;
             playerPrefs.Remove(playerPrefs.Where(x => x.index == indexForRemove).First());
             indexForRemove = null;
         }
+    }
+
+    void ShowStatusMessage(string message) {
+        statusMessage = message;
+        statusMessageCoroutine = StatusMessageClearAfter(5);
+        EditorCoroutineUtility.StartCoroutine(statusMessageCoroutine, this);
+    }
+
+    IEnumerator StatusMessageClearAfter(float seconds) {
+        statusMessageTimer = Time.realtimeSinceStartup;
+        while (seconds > (Time.realtimeSinceStartup - statusMessageTimer)) {
+            yield return null; //WaitForSeconds doesn't work in Editor
+        }
+        statusMessage = "";
+        this.Repaint();
     }
 
     string ConvertToString(object obj) {
@@ -154,7 +182,6 @@ public class PlayerPrefsEditorWindow : EditorWindow {
             return result;
         return 0;
     }
-
     int GetTypesIndex(string type) {
         return PlayerPrefTypes.ToList().FindIndex(x => x == type);
     }
@@ -168,14 +195,15 @@ public class PlayerPrefsEditorWindow : EditorWindow {
 
         GUILayout.BeginHorizontal();
         if (unsavedChanges) {
-            GUILayout.BeginHorizontal();
+        GUILayout.BeginHorizontal();
             if (GUILayout.Button("Save", buttonSaveStyle, GUILayout.Width(100)))
                 ValidateAndSaveItems();
             if (GUILayout.Button("Reset", GUILayout.Width(100)))
                 Reload();
-            GUILayout.EndHorizontal();
+        GUILayout.EndHorizontal();
         }
         GUILayout.FlexibleSpace();
+
         if (GUILayout.Button("Reload", GUILayout.Width(100)))
             Reload();
         GUILayout.Space(6);
@@ -211,11 +239,14 @@ public class PlayerPrefsEditorWindow : EditorWindow {
         }
         unsavedChanges = false;
         Reload();
+        ShowStatusMessage("Items saved.");
+        this.Repaint();
     }
 
     void Reload() {
         unsavedChanges = false;
         Awake();
+        ShowStatusMessage("Data reloaded.");
     }
 
     class ValidationResult {
@@ -241,6 +272,7 @@ public class PlayerPrefsEditorWindow : EditorWindow {
         if (!validateResult.isError) {
             item = validateResult.resultItem;
             playerPrefs.Add(new PlayerPrefItem(item.type, item.key, item.value));
+            ShowStatusMessage("New item created.");
         } else {
             ShowMessage(validateResult.message);
         }
