@@ -19,7 +19,7 @@ public class PlayerPrefsEditorWindow : EditorWindow {
     string selectedNewPrefType = "String";
     bool unsavedChanges = false;
     Vector2 scrollPosition = new Vector2();
-    string statusMessage = "Asfkjhasfkjhsa";
+    string statusMessage = "";
     IEnumerator statusMessageCoroutine;
     float statusMessageTimer; 
 
